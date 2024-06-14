@@ -1,11 +1,13 @@
 # Importación de librerías
 from flask import Flask, jsonify, request, after_this_request, make_response
+from flask_cors import CORS
 from pymongo import MongoClient
 from Functions.Functions import *
 from Config.Config import *
 
 # Inicialización del servidor
 app = Flask(__name__)
+CORS(app)
 app.config.from_object(Config)
 
 # Conexión con la base de datos
@@ -157,6 +159,20 @@ def agregar_miembro(current_user):
     
     return jsonify({'message': 'Usuario añadido exitosamente'}), 201
 
+# Endpoint para obtener la lista de equipos
+@app.route('/equipos/listar', methods=['GET'])
+@token_required
+def obtener_equipos(current_user):
+    equipos = collection_equipos.find({'members': current_user['username']})
+    result = []
+    for equipo in equipos:
+        equipo['_id'] = str(equipo['_id'])
+        result.append({
+            'team_name': equipo['team_name'],
+            'team_desc': equipo['team_desc'],
+        })
+    return jsonify(result), 200
+
 # Endpoint para generar fragmentos de secreto y guardarlos en MongoDB
 @app.route('/equipos/generar_fragmentos', methods=['POST'])
 @token_required
@@ -278,6 +294,26 @@ def subir_fragmento(current_user, team_name):
     )
 
     return jsonify({'message': 'Fragmento subido exitosamente'}), 201
+
+# Endpoint para obtener la lista de miembros de un equipo y quien ha subido fragmentos
+@app.route('/equipos/miembros/<team_name>', methods=['GET'])
+@token_required
+def obtener_miembros(current_user, team_name):
+    # Verificar si el equipo existe
+    equipo = collection_equipos.find_one({'team_name': team_name})
+    if not equipo:
+        return jsonify({'error': 'Equipo no encontrado'}), 404
+
+    # Verificar si el usuario actual es miembro del equipo
+    if current_user['username'] not in equipo['members']:
+        return jsonify({'error': 'No tienes permiso para ver los miembros de este equipo'}), 403
+
+    # Obtener la lista de miembros del equipo
+    members = equipo['members']
+    fragments = equipo['fragments']
+
+    return jsonify({'members': members, 'fragments': fragments}), 200
+
 
 # Endpoint para cifrar un documento
 @app.route('/equipos/cifrar_documento/<team_name>', methods=['POST'])
