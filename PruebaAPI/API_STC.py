@@ -250,7 +250,6 @@ def descargar_fragmento(current_user, team_name):
 
     return response
 
-# Endpoint para subir tu clave fragmento
 @app.route('/equipos/subir_fragmentos/<team_name>', methods=['POST'])
 @token_required
 def subir_fragmento(current_user, team_name):
@@ -263,21 +262,14 @@ def subir_fragmento(current_user, team_name):
     if current_user['username'] not in equipo['members']:
         return jsonify({'error': 'No tienes permiso para subir fragmentos para este equipo'}), 403
 
-    # Verificar si se ha enviado un archivo
-    if 'file' not in request.files:
-        return jsonify({'error': 'No se ha enviado ningún archivo'}), 400
+    # Verificar si se ha enviado el contenido del archivo
+    if 'content' not in request.json:
+        return jsonify({'error': 'No se ha enviado contenido de archivo'}), 400
 
-    file = request.files['file']
+    file_content = request.json['content']
     
-    # Verificar si el archivo tiene extensión .pem
-    if not file.filename.endswith('.pem'):
-        return jsonify({'error': 'Formato de archivo no soportado, debe ser .pem'}), 400
-
-    # Leer el contenido del archivo
-    fragment_data = file.read()
-
     # Codificar el contenido en base64
-    fragment_base64 = base64.b64encode(fragment_data).decode()
+    fragment_base64 = base64.b64encode(file_content.encode()).decode()
 
     # Verificar si el fragmento del usuario ya existe en la base de datos
     existing_fragment = collection_equipos.find_one(
