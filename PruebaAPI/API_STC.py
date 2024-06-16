@@ -1,13 +1,14 @@
 # Importación de librerías
 from flask import Flask, jsonify, request, after_this_request, make_response
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 from pymongo import MongoClient
 from Functions.Functions import *
 from Config.Config import *
 
 # Inicialización del servidor
 app = Flask(__name__)
-CORS(app)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 app.config.from_object(Config)
 
 # Conexión con la base de datos
@@ -20,6 +21,13 @@ except Exception as e:
 # Obtenemos todas las colecciones de la base
 collection_usuarios = db.Usuarios    # Usuarios
 collection_equipos = db.Equipos      # Equipos
+
+def _build_cors_preflight_response():
+    response = make_response()
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "*")
+    response.headers.add("Access-Control-Allow-Methods", "*")
+    return response
 
 # Función para revisar el Token (sesión iniciada)
 def token_required(f):
@@ -253,6 +261,7 @@ def descargar_fragmento(current_user, team_name):
 @app.route('/equipos/subir_fragmentos/<team_name>', methods=['POST'])
 @token_required
 def subir_fragmento(current_user, team_name):
+    _build_cors_preflight_response()
     # Verificar si el equipo existe
     equipo = collection_equipos.find_one({'team_name': team_name})
     if not equipo:
