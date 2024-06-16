@@ -456,6 +456,44 @@ def descargar_documento(current_user, team_name, filename):
 
     return response
 
+# Endpoint para obtener el valor de has_key de un equipo
+@app.route('/equipos/has_key/<team_name>', methods=['GET'])
+@token_required
+def obtener_has_key(current_user, team_name):
+    # Verificar si el equipo existe
+    equipo = collection_equipos.find_one({'team_name': team_name})
+    if not equipo:
+        return jsonify({'error': 'Equipo no encontrado'}), 404
+
+    # Verificar si el usuario actual es miembro del equipo
+    if current_user['username'] not in equipo['members']:
+        return jsonify({'error': 'No tienes permiso para ver este equipo'}), 403
+
+    # Obtener el valor de has_key
+    has_key = equipo.get('has_key', False)
+
+    return jsonify({'has_key': has_key}), 200
+
+# Endpoint para obtener los nombres de archivo cifrados de un equipo
+@app.route('/equipos/encrypted_files/nombres/<team_name>', methods=['GET'])
+@token_required
+def obtener_nombres_archivos_cifrados(current_user, team_name):
+    # Verificar si el equipo existe
+    equipo = collection_equipos.find_one({'team_name': team_name})
+    if not equipo:
+        return jsonify({'error': 'Equipo no encontrado'}), 404
+
+    # Verificar si el usuario actual es miembro del equipo
+    if current_user['username'] not in equipo['members']:
+        return jsonify({'error': 'No tienes permiso para ver los archivos cifrados de este equipo'}), 403
+
+    # Obtener los nombres de archivo cifrados del equipo
+    encrypted_files = equipo.get('encrypted_files', {})
+    filenames = list(encrypted_files.keys())
+
+    return jsonify({'filenames': filenames}), 200
+
+
 # Iniciamos el server
 if __name__ == '__main__':
     app.run(debug=True)
