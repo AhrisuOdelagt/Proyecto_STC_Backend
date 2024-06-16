@@ -320,6 +320,7 @@ def obtener_miembros(current_user, team_name):
 @app.route('/equipos/cifrar_documento/<team_name>', methods=['POST'])
 @token_required
 def cifrar_documento(current_user, team_name):
+    _build_cors_preflight_response()
     # Verificar si el equipo existe
     equipo = collection_equipos.find_one({'team_name': team_name})
     if not equipo:
@@ -385,8 +386,8 @@ def cifrar_documento(current_user, team_name):
 
     # Sobrescribir el archivo cifrado en la base de datos si ya existe, de lo contrario agregarlo
     collection_equipos.update_one(
-        {'team_name': team_name, 'encrypted_files.filename': filename},
-        {'$set': {'encrypted_files.$.data': cipher_base64}},
+        {'team_name': team_name},
+        {'$set': {f'encrypted_files.{filename}.data': cipher_base64}},
         upsert=True  # Esto permite que si no se encuentra el archivo, se agregue uno nuevo
     )
 
