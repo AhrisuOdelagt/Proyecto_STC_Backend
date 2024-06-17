@@ -321,6 +321,7 @@ def obtener_miembros(current_user, team_name):
 @token_required
 def cifrar_documento(current_user, team_name):
     _build_cors_preflight_response()
+    
     # Verificar si el equipo existe
     equipo = collection_equipos.find_one({'team_name': team_name})
     if not equipo:
@@ -384,12 +385,18 @@ def cifrar_documento(current_user, team_name):
     # Convertir los datos cifrados a base64 para almacenarlos en la base de datos
     cipher_base64 = base64.b64encode(cipher_data).decode()
 
-    # Sobrescribir el archivo cifrado en la base de datos si ya existe, de lo contrario agregarlo
-    collection_equipos.update_one(
-        {'team_name': team_name},
-        {'$set': {f'encrypted_files.{filename}.data': cipher_base64}},
-        upsert=True  # Esto permite que si no se encuentra el archivo, se agregue uno nuevo
+    # Intentar actualizar el archivo cifrado existente
+    result = collection_equipos.update_one(
+        {'team_name': team_name, 'encrypted_files.filename': filename},
+        {'$set': {'encrypted_files.$.data': cipher_base64}}
     )
+
+    # Si no se actualizó ningún documento, agregar un nuevo archivo cifrado
+    if result.matched_count == 0:
+        collection_equipos.update_one(
+            {'team_name': team_name},
+            {'$push': {'encrypted_files': {'filename': filename, 'data': cipher_base64}}}
+        )
 
     return jsonify({'message': 'Archivo cifrado y almacenado en la nube'}), 200
 
@@ -488,8 +495,8 @@ def obtener_nombres_archivos_cifrados(current_user, team_name):
         return jsonify({'error': 'No tienes permiso para ver los archivos cifrados de este equipo'}), 403
 
     # Obtener los nombres de archivo cifrados del equipo
-    encrypted_files = equipo.get('encrypted_files', {})
-    filenames = list(encrypted_files.keys())
+    encrypted_files = equipo.get('encrypted_files', [])
+    filenames = [file['filename'] for file in encrypted_files]
 
     return jsonify({'filenames': filenames}), 200
 
