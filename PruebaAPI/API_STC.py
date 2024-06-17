@@ -398,6 +398,12 @@ def cifrar_documento(current_user, team_name):
             {'$push': {'encrypted_files': {'filename': filename, 'data': cipher_base64}}}
         )
 
+    # Vaciar el arreglo de fragmentos después de descifrar el documento
+    collection_equipos.update_one(
+        {'team_name': team_name},
+        {'$set': {'fragments': []}}
+    )
+
     return jsonify({'message': 'Archivo cifrado y almacenado en la nube'}), 200
 
 # Endpoint para descargar y descifrar un archivo
@@ -460,6 +466,12 @@ def descargar_documento(current_user, team_name, filename):
     response = make_response(plaintext_data)
     response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
     response.headers['Content-Type'] = 'application/octet-stream'
+
+    # Vaciar el arreglo de fragmentos después de descifrar el documento
+    collection_equipos.update_one(
+        {'team_name': team_name},
+        {'$set': {'fragments': []}}
+    )
 
     return response
 
