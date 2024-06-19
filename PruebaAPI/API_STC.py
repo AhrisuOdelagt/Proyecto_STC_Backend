@@ -506,4 +506,4 @@ def obtener_nombres_archivos_cifrados(current_user, team_name):
 
 # Iniciamos el server
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
