@@ -2,6 +2,7 @@
 from flask import Flask, jsonify, request, after_this_request, make_response
 from flask_cors import CORS, cross_origin
 from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 from Functions.Functions import *
 from Config.Config import *
 
@@ -12,12 +13,14 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 app.config.from_object(Config)
 
 # Conexión con la base de datos
-client = MongoClient(app.config['MONGO_URI'])
+client = MongoClient(app.config['MONGO_URI'], server_api=ServerApi('1'))
 try:
-    db = client.get_database()
-    print(f"Conexión exitosa con la BD")
+    client.admin.command('ping')
+    db = client.get_database(app.config['MONGO_DB'])
+    print("Pinged your deployment. You successfully connected to MongoDB!")
 except Exception as e:
-    print(f"Hubo un error al conectar con la BD: {e}")
+    print(e)
+
 # Obtenemos todas las colecciones de la base
 collection_usuarios = db.Usuarios    # Usuarios
 collection_equipos = db.Equipos      # Equipos
@@ -398,12 +401,6 @@ def cifrar_documento(current_user, team_name):
             {'$push': {'encrypted_files': {'filename': filename, 'data': cipher_base64}}}
         )
 
-    # Vaciar el arreglo de fragmentos después de descifrar el documento
-    collection_equipos.update_one(
-        {'team_name': team_name},
-        {'$set': {'fragments': []}}
-    )
-
     return jsonify({'message': 'Archivo cifrado y almacenado en la nube'}), 200
 
 # Endpoint para descargar y descifrar un archivo
@@ -466,12 +463,6 @@ def descargar_documento(current_user, team_name, filename):
     response = make_response(plaintext_data)
     response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
     response.headers['Content-Type'] = 'application/octet-stream'
-
-    # Vaciar el arreglo de fragmentos después de descifrar el documento
-    collection_equipos.update_one(
-        {'team_name': team_name},
-        {'$set': {'fragments': []}}
-    )
 
     return response
 
